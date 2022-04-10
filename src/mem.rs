@@ -7,8 +7,8 @@ pub struct MemBuf<const SIZE: usize = 512> {
 
 impl<const SIZE: usize> MemBuf<SIZE> {
     /// construct a `MemBuf` from an array and a start index
-    pub fn new(buf: [u8; SIZE], start: usize) -> MemBuf<SIZE> {
-        MemBuf { buf, start }
+    pub fn new<const S: usize>(buf: [u8; S], start: usize) -> MemBuf<S> {
+        MemBuf::<S> { buf, start }
     }
 
     /// set a byte in the buffer
@@ -17,14 +17,18 @@ impl<const SIZE: usize> MemBuf<SIZE> {
     }
 
     /// set a bit in the buffer
-    pub fn set_bit(&mut self, i: usize, b: bool) {
+    pub fn set_bit(&mut self, i: usize, s: bool) {
         if i > self.buf.len() * 8 {
             panic!("index out of bounds: {}/{}", i, self.buf.len() * 8);
         }
         let b = (i - (i % 8)) / 8;
         let i = i % 8;
 
-        self.buf[b] = self.buf[b] | (1 << i);
+        if s {
+            self.buf[b] = self.buf[b] | (1 << i);
+        } else {
+            self.buf[b] = self.buf[b] & !(1 << i);
+        }
     }
 
     /// get a byte in the buffer
@@ -64,10 +68,10 @@ impl<const SIZE: usize> MemBuf<SIZE> {
     }
 }
 
-impl<const SIZE: usize> Default for MemBuf<SIZE> {
+impl Default for MemBuf {
 
     fn default() -> Self {
-        MemBuf::new([0u8; SIZE], 0x200)
+        MemBuf::<512>::new([0u8; 512], 0x200)
     }
 }
 
@@ -77,33 +81,33 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let m = MemBuf::new([1; 3], 2);
+        let m = MemBuf::<3>::new([1; 3], 2);
         assert_eq!(m.get_buf(), [1, 1, 1]);
         assert_eq!(m.get_start(), 2);
     }
 
     #[test]
     fn test_get() {
-        let m = MemBuf::new([6u8; 5], 0);
+        let m = MemBuf::<5>::new([6u8; 5], 0);
         assert_eq!(m.get(3), 6);
     }
 
     #[test]
     fn test_get_bit() {
-        let m = MemBuf::new([1; 5], 0);
+        let m = MemBuf::<5>::new([1; 5], 0);
         assert!(m.get_bit(8));
     }
 
     #[test]
     fn test_set() {
-        let mut m = MemBuf::<12>::default();
+        let mut m = MemBuf::default();
         m.set(5, 12);
         assert_eq!(m.get(5), 12);
     }
 
     #[test]
     fn test_set_bit() {
-        let mut m = MemBuf::<12>::default();
+        let mut m = MemBuf::default();
         m.set_bit(20, true);
         assert!(m.get_bit(20));
     }
@@ -111,7 +115,7 @@ mod tests {
     #[test]
     fn test_impl() {
         let m = MemBuf::<512>::default();
-        let mut m = MemBuf::new([5u8; 512], 0x600);
+        let mut m = MemBuf::<512>::new([5u8; 512], 0x600 / 8);
         m.set(12, 8);
         m.set_bit(3000, false);
         m.get(44);
