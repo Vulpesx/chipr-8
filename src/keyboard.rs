@@ -1,89 +1,101 @@
-use std::{error::Error, num::ParseIntError};
 
-const KEYS: [char; 16] = [
-        '1','2','3','C',
-        '4','5','6','D',
-        '7','8','9','E',
-        'A','0','B','F',];
-
-#[derive(Debug)]
-pub enum HexError {
-    HexParseIntErr(ParseIntError),
-    InvalidHex,
+pub struct Keyboard<const SIZE: usize, I, O> {
+    key_set: [char; SIZE],
+    p: fn(&Self, [char; SIZE], I) -> O,
 }
 
-
-pub fn valid_char(c: char) -> bool {
-    KEYS.contains(&c)
-}
-
-pub fn valid_str(s: &str) -> bool {
-    let c: Vec<char> = s.chars().collect();
-    for i in 0..c.len() {
-        if !valid_char(c[i]) {
-            return false;
+impl<const SIZE: usize, I, O> Keyboard<SIZE, I, O> {
+    pub fn new(keys: [char; SIZE], p: fn(&Self, [char; SIZE], I) -> O) -> Keyboard<SIZE, I, O> {
+        Keyboard {
+            key_set: keys,
+            p,
         }
     }
-    s.len() <= 3
-}
 
-pub fn from_hex(s: &str) -> Result<u16, HexError> {
-    let s = s.to_uppercase();
-    if !valid_str(&s) {
-        return Err(HexError::InvalidHex);
+    pub fn is_char_valid(&self, c: char) -> bool {
+        self.key_set.contains(&c)
     }
-    let c: Vec<char> = s.chars().collect();
-    let mut b: [u16; 3] = [0; 3];
-    let mut s: u16 = 0;
-    for i in 0..c.len() {
-        if c[i].is_numeric() {
-            let n = String::from(c[i]).parse::<u16>();
-            if n.is_err() { return Err(HexError::HexParseIntErr(n.unwrap_err()))}
-            b[i] = n.unwrap();
-        } else {
-            b[i] = match c[i] {
-                'A' => 10,
-                'B' => 11,
-                'C' => 12,
-                'D' => 13,
-                'E' => 14,
-                'F' => 15,
-                _ => return Err(HexError::InvalidHex),
+
+    pub fn is_str_valid(&self, s: &str) -> bool {
+        let s: Vec<char> = s.chars().collect();
+        for c in s {
+            if !self.is_char_valid(c) {
+                return false;
             }
         }
-        s += b[i] * (16 * (16 * i as u16));
-    }
-    Ok(s)
-}
 
+        true
+    }
+
+    pub fn parse_input(&self, i: I) -> O {
+        (self.p)(self, self.key_set, i)
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_valid_char() {
-        assert!(valid_char('f'));
-        assert!(!valid_char('h'));
+    enum InputReq {
+        HEX,
+        TO_INT,
+    }
+    struct StrInput {
+        input: String,
+        req: InputReq,
+    }
+
+    impl StrInput {
+        pub fn new(i: &str, r: InputReq) -> StrInput {
+            StrInput {
+                input: String::from(i),
+                req: r,
+            }
+        }
+    }
+
+    fn test_keyboard() -> Keyboard<16, StrInput, u8> {
+        Keyboard::new(
+            [
+            '1','2','3','C',
+            '4','5','6','D',
+            '7','8','9','E',
+            'A','0','B','F',
+            ],
+            |_, _, i: StrInput| {
+                i.input.parse::<u8>().unwrap()
+            })
     }
 
     #[test]
-    fn test_valid_str() {
-        assert!(valid_str("fff"));
-        assert!(!valid_str("ffff"));
-        assert!(!valid_str("ffh"));
+    fn test_is_char_valid() {
+        let k = test_keyboard();
+        assert!(k.is_char_valid('F'));
+        assert!(!k.is_char_valid('f'))
     }
 
     #[test]
-    fn test_from_hex() {
-        assert_eq!(512, from_hex("200").unwrap());
-        assert!(from_hex("hi").is_err());
+    fn test_is_str_valid() {
+        let k = test_keyboard();
+        assert!(k.is_str_valid("15FE"));
+        assert!(!k.is_str_valid("ljlkjlk"));
+    }
+
+    #[test]
+    fn test_parse_input() {
+        let k = test_keyboard();
+        let i = k.parse_input(StrInput::new("12", InputReq::TO_INT));
+        assert_eq!(i, 12);
     }
 
     #[test]
     fn test_impl() {
-        valid_char('3');
-        valid_str("1b9");
-        from_hex("fff");
+        
+
+        let k = Keyboard::new(['5'; 5], |_, _, i| {});
+
+        k.is_char_valid('5');
+        k.is_str_valid("555");
+        k.parse_input(5);
     }
 }
