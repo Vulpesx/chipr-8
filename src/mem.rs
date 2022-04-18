@@ -7,8 +7,8 @@ pub struct MemBuf<const SIZE: usize = 512> {
 
 impl<const SIZE: usize> MemBuf<SIZE> {
     /// construct a `MemBuf` from an array and a start index
-    pub fn new<const S: usize>(buf: [u8; S], start: usize) -> MemBuf<S> {
-        MemBuf::<S> { buf, start }
+    pub fn new(buf: [u8; SIZE], start: usize) -> MemBuf<SIZE> {
+        MemBuf::<SIZE> { buf, start }
     }
 
     /// set a byte in the buffer
@@ -68,10 +68,10 @@ impl<const SIZE: usize> MemBuf<SIZE> {
     }
 }
 
-impl Default for MemBuf {
+impl Default for MemBuf<512> {
 
     fn default() -> Self {
-        MemBuf::<512>::new([0u8; 512], 0x200)
+        MemBuf::new([0u8; 512], 0x200)
     }
 }
 
@@ -81,20 +81,20 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let m = MemBuf::<3>::new([1; 3], 2);
+        let m = MemBuf::new([1; 3], 2);
         assert_eq!(m.get_buf(), [1, 1, 1]);
         assert_eq!(m.get_start(), 2);
     }
 
     #[test]
     fn test_get() {
-        let m = MemBuf::<5>::new([6u8; 5], 0);
+        let m = MemBuf::new([6u8; 5], 0);
         assert_eq!(m.get(3), 6);
     }
 
     #[test]
     fn test_get_bit() {
-        let m = MemBuf::<5>::new([1; 5], 0);
+        let m = MemBuf::new([1; 5], 0);
         assert!(m.get_bit(8));
     }
 
