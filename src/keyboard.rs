@@ -1,21 +1,27 @@
 
+/// Keyboard struct parses inputs via provided closure / function using a specified keyset
 pub struct Keyboard<const SIZE: usize, I, O> {
     key_set: [char; SIZE],
     p: fn(&Self, [char; SIZE], I) -> O,
 }
 
 impl<const SIZE: usize, I, O> Keyboard<SIZE, I, O> {
-    pub fn new(keys: [char; SIZE], p: fn(&Self, [char; SIZE], I) -> O) -> Keyboard<SIZE, I, O> {
+    /// creates a new `Keyboard` using an array of `chars` and a `closure`
+    pub fn new(keys: [char; SIZE],p: fn(&Self, [char; SIZE], I) -> O)
+        -> Keyboard<SIZE, I, O>
+    {
         Keyboard {
             key_set: keys,
             p,
         }
     }
 
+    /// checks if given `char` is in stored key set
     pub fn is_char_valid(&self, c: char) -> bool {
         self.key_set.contains(&c)
     }
 
+    /// determins if every `char` in the given `str` is valid
     pub fn is_str_valid(&self, s: &str) -> bool {
         let s: Vec<char> = s.chars().collect();
         for c in s {
@@ -27,8 +33,10 @@ impl<const SIZE: usize, I, O> Keyboard<SIZE, I, O> {
         true
     }
 
+    /// parses input using given closure
+    /// does not validate input as input could be any `struct` or value
     pub fn parse_input(&self, i: I) -> O {
-        (self.p)(self, self.key_set, i)
+        (self.p)(self, self.key_set, i) // runs stored closure
     }
 }
 
