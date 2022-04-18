@@ -58,8 +58,8 @@ impl<const SIZE: usize> MemBuf<SIZE> {
     }
 
     /// get the buffer in the form of a slice
-    pub fn get_buf(&self) -> &[u8] {
-        &self.buf
+    pub fn get_buf(&self) -> [u8; SIZE] {
+        self.buf
     }
 
     /// get the starting index
