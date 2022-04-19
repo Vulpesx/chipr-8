@@ -35,8 +35,7 @@ impl Reg8 {
     }
 
     /// set `MemBuf` value for stored indexes
-    pub fn set<const S: usize>(&self, m: &mut MemBuf<S>) {
-        m.set(self.i, self.v);
+    pub fn set<const S: usize>(&self, m: &mut MemBuf<S>) { m.set(self.i, self.v);
     }
     
     /// sets a bit at index i
@@ -52,8 +51,13 @@ impl Reg8 {
     }
 
     /// gets stored value
-    pub fn value(&self) -> u8 {
+    pub fn get_value(&self) -> u8 {
         self.v
+    }
+
+    /// sets the stored value
+    pub fn set_value(&mut self, v: u8) {
+        self.v = v;
     }
 }
 
@@ -100,8 +104,25 @@ impl Reg16 {
         }
     }
 
+    /// gets the specified byte
+    pub fn get_byte(&self, i: usize) -> u8 {
+        self.v.to_be_bytes()[i]
+    }
+
+    /// sets the specified byte
+    pub fn set_byte(&mut self, i: usize, b: u8) {
+        let mut v = self.v.to_be_bytes();
+        v[i] = b;
+        self.v = u16::from_be_bytes(v);
+    }
+
+    /// sets the stored value
+    pub fn set_value(&mut self, v: u16) {
+        self.v = v;
+    }
+
     /// gets stored value
-    pub fn value(&self) -> u16 {
+    pub fn get_value(&self) -> u16 {
         self.v
     }
 }
@@ -126,10 +147,10 @@ mod tests {
         let m = test_membuf();
         let mut r = Reg8::new(1, 3);
         r.get(&m);
-        assert_eq!(r.value(), 0);
+        assert_eq!(r.get_value(), 0);
         let mut r = Reg16::new([1, 2], 5);
         r.get(&m);
-        assert_eq!(r.value(), 0);
+        assert_eq!(r.get_value(), 0);
     }
 
     #[test]
@@ -163,11 +184,28 @@ mod tests {
     }
 
     #[test]
+    fn test_set_byte() {
+        let mut r = Reg16::new([1, 2], 0);
+        r.set_byte(0, 5);
+        assert_eq!(r.get_byte(0), 5);
+    }
+
+    #[test]
+    fn test_set_value() {
+        let mut r = Reg8::new(1, 2);
+        r.set_value(10);
+        assert_eq!(r.get_value(), 10);
+        let mut r = Reg16::new([1, 2], 0);
+        r.set_value(400);
+        assert_eq!(r.get_value(), 400);
+    }
+
+    #[test]
     fn test_value() {
         let r = Reg8::new(1, 2);
-        assert_eq!(r.value(), 2);
+        assert_eq!(r.get_value(), 2);
         let r = Reg16::new([1, 2], 4);
-        assert_eq!(r.value(), 4);
+        assert_eq!(r.get_value(), 4);
     }
 
     #[test]
@@ -178,11 +216,18 @@ mod tests {
         r.set(&mut m);
         r.get_bit(7);
         r.set_bit(5, true);
+        r.get_value();
+        r.set_value(5);
 
         let mut r = Reg16::new([2, 3], 5);
         r.get(&m);
         r.set(&mut m);
         r.get_bit(10);
         r.set_bit(9, false);
+        r.get_value();
+        r.set_value(5);
+        r.set_byte(1, 5);
+
+        // TODO: implement generic reg struct
     }
 }
