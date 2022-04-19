@@ -1,32 +1,40 @@
+use std::time::Instant;
 use crate::{reg::Reg8, mem::MemBuf};
 
 pub struct Timer<'a> {
     r: &'a mut Reg8,
-    prev: f32,
-    t: f32,
+    prev: Instant,
     h: usize,
-    c: fn(u8),
+    c: fn(f32, u8),
 }
 
 impl<'a> Timer<'a> {
-    pub fn new(h: usize, r: &mut Reg8, c: fn(u8)) -> Timer {
+    pub fn new(h: usize, r: &mut Reg8, c: fn(f32, u8)) -> Timer {
         Timer {
             h,
             r,
             c,
-            prev: 0f32,
-            t: 0f32,
+            prev: Instant::now(),
         }
     }
 
     pub fn update<const S: usize>(&mut self, m: &mut MemBuf<S>) -> bool {
         self.r.get(m);
-        if self.r.value() == 0 { return false; }
-        if self.prev >= 1.0 / self.h as f32 {
-            self.prev = 0f32;
-            self.r.value() - 1;
+        let v = self.r.get_value();
+        if v == 0 { return false; }
+
+        let since = self.prev.elapsed().as_secs_f32();
+        if since >= 1.0 / self.h as f32 {
+            (self.c)(since, v);
+            self.prev = Instant::now();
+            self.r.set_value(v - 1);
+            self.r.set(m);
         }
         true
+    }
+
+    pub fn get_value(&self) -> u8 {
+        self.r.get_value()
     }
 }
 
@@ -40,9 +48,10 @@ mod tests {
         let mut m = MemBuf::new([0; 5], 0);
         let mut r = Reg8::new(0, 0);
         r.get(&m); // good practice
-        r.set_bit(2, true); // = 4
+        r.set_value(4);
         r.set(&mut m);
-        let mut t = Timer::new(60, &mut r, |v| {println!("buzz: {}", v);});
+        let mut t = Timer::new(60, &mut r, |s, v| {println!("buzz: {}:{}", v, s);});
+        assert_eq!(t.get_value(), 4);
         while t.update(&mut m) {}
         assert_eq!(t.get_value(), 0);
     }
@@ -51,7 +60,7 @@ mod tests {
     fn test_impl() {
         let mut m = MemBuf::new([0;5], 0);
         let mut r = Reg8::new(0, 0);
-        let mut t = Timer::new(60, &mut r, |v| {});
+        let mut t = Timer::new(60, &mut r, |_, v| {});
         t.update(&mut m);
         t.get_value();
     }
